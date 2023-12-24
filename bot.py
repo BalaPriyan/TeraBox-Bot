@@ -1,5 +1,5 @@
 from pyrogram import Client, filters
-
+import asyncio
 from bs4 import BeautifulSoup
 import httpx
 import os
@@ -97,6 +97,10 @@ async def handle_terabox_link(app, message) -> None:
         await app.send_message(message.chat.id, f"An error occurred: {str(e)}")
 
 
+# ... (other imports and environment variables)
+
+# ... (your functions and logic remain the same)
+
 async def main() -> None:
     app = Client('bot', api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
     await app.start()
@@ -114,13 +118,16 @@ async def main() -> None:
                 await app.send_message(message.chat.id, "Failed to fetch the download link from Terabox. Please check the link.")
         except Exception as e:
             await app.send_message(message.chat.id, f"An error occurred: {str(e)}")
-                
+
+    loop = asyncio.get_running_loop() if asyncio.get_event_loop().is_running() else None
+
+    if loop:
+        app.loop = loop
+        loop.create_task(app.idle())
+    else:
+        asyncio.run(app.idle())
 
     app.run(handle_terabox_link)
 
-
 if __name__ == '__main__':
-    import asyncio
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())
