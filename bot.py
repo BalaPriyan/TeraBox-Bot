@@ -119,15 +119,7 @@ async def main() -> None:
         except Exception as e:
             await app.send_message(message.chat.id, f"An error occurred: {str(e)}")
 
-    loop = asyncio.get_running_loop() if asyncio.get_event_loop().is_running() else None
-
-    if loop:
-        app.loop = loop
-        loop.create_task(app.idle())
-    else:
-        asyncio.run(app.idle())
-
-    app.run(handle_terabox_link)
+    await app.idle()
 
 if __name__ == '__main__':
     asyncio.run(main())
