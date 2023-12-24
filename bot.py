@@ -9,7 +9,7 @@ load_dotenv('config.env')
 
 TOKEN = os.getenv('TOKEN')
 LOG_CHANNEL = os.getenv('LOG_CHANNEL')
-tera_cookie = os.getenv('TERA_COOKIE')
+TERA_COOKIE = os.getenv('TERA_COOKIE')
 
 async def terabox(url: str) -> str:
     async with httpx.AsyncClient() as client:
@@ -24,7 +24,7 @@ async def terabox(url: str) -> str:
         url = retryme(url).url
         key = url.split('?surl=')[-1]
         url = f'http://www.terabox.com/wap/share/filelist?surl={key}'
-        headers = {"Cookie": f"ndus={tera_cookie}"}
+        headers = {"Cookie": f"ndus={TERA_COOKIE}"}
 
         res = await retryme(url)
         key = res.url.split('?surl=')[-1]
