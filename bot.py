@@ -1,16 +1,19 @@
 from pyrogram import Client
-from dotenv import load_dotenv
+
 from bs4 import BeautifulSoup
 import httpx
 import os
+
+from dotenv import load_dotenv
 
 load_dotenv('config.env')
 
 TOKEN = os.getenv('TOKEN')
 LOG_CHANNEL = os.getenv('LOG_CHANNEL')
 TERA_COOKIE = os.getenv('TERA_COOKIE')
+API_HASH = os.getenv('API_HASH')
+API_ID = os.getenv('API_ID')
 
-# Define your exceptions here if needed
 
 
 async def terabox(url: str) -> str:
@@ -94,7 +97,7 @@ async def handle_terabox_link(app, message) -> None:
 
 
 async def main() -> None:
-    app = Client("my_account")
+    app = Client("my_account", api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
     await app.start()
 
     # Define your filters and message handlers here
