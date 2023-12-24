@@ -1,4 +1,4 @@
-from pyrogram import Client
+from pyrogram import Client, filters
 
 from bs4 import BeautifulSoup
 import httpx
