@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 
 load_dotenv('config.env')
 
+
+SESSION = os.getenv('SESSION')
 TOKEN = os.getenv('TOKEN')
 LOG_CHANNEL = os.getenv('LOG_CHANNEL')
 TERA_COOKIE = os.getenv('TERA_COOKIE')
@@ -97,10 +99,23 @@ async def handle_terabox_link(app, message) -> None:
 
 
 async def main() -> None:
-    app = Client("my_account", api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
+    app = Client(session=SESSION, api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
     await app.start()
 
     # Define your filters and message handlers here
+    @app.on_message(filters.regex(r'https?://(?:1040)?terabox\.com[^\s]+'))
+    async def handle_terabox_link(client, message):
+        link = message.text
+        try:
+            download_link = await terabox(link)
+            if download_link:
+                await download_and_upload_file(app, message, download_link)
+                await app.send_message(LOG_CHANNEL, f"File downloaded and uploaded from Terabox by user {message.from_user.first_name} {message.from_user.last_name}")
+            else:
+                await app.send_message(message.chat.id, "Failed to fetch the download link from Terabox. Please check the link.")
+        except Exception as e:
+            await app.send_message(message.chat.id, f"An error occurred: {str(e)}")
+                
 
     app.run(handle_terabox_link)
 
