@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 load_dotenv('config.env')
 
 
-SESSION = os.getenv('SESSION')
 TOKEN = os.getenv('TOKEN')
 LOG_CHANNEL = os.getenv('LOG_CHANNEL')
 TERA_COOKIE = os.getenv('TERA_COOKIE')
@@ -99,7 +98,7 @@ async def handle_terabox_link(app, message) -> None:
 
 
 async def main() -> None:
-    app = Client(session=SESSION, api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
+    app = Client('bot', api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
     await app.start()
 
     # Define your filters and message handlers here
