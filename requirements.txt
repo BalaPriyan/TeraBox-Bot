@@ -1,5 +1,7 @@
 pyrogram
+httpcore
 httpx
 beautifulsoup4
 python-dotenv
 tgcrypto
+
