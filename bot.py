@@ -10,7 +10,7 @@ dispatcher = bot.dispatcher
 def start(update: Update, context: CallbackContext) -> None:
     user = update.message.from_user
     update.message.reply_text(
-        f"Hi {user.first_name},\n\nI can Download Files from Terabox.\n\nMade with ❤️ by @Mohd_arman_idrisi01\n\nSend any terabox link to download.",
+        f"Hi {user.first_name},\n\nI can Download Files from Terabox.\n\nMade with ❤️ by @BalaPriyan\n\nSend any terabox link to download.",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("Channel", url="https://t.me/BalaPriyan"), InlineKeyboardButton("Report bug", url="https://t.me/TeraBoxTgbot")]
         ])
