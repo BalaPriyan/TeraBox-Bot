@@ -1,125 +1,78 @@
-from pyrogram import Client, filters
-import asyncio
-from bs4 import BeautifulSoup
-import httpx
-import os
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+import requests
+from flask import Flask, request
 
-from dotenv import load_dotenv
+bot_token = 'YOUR_BOT_TOKEN'
+bot = Updater(token=bot_token, use_context=True)
+dispatcher = bot.dispatcher
 
-load_dotenv('config.env')
+def start(update: Update, context: CallbackContext) -> None:
+    user = update.message.from_user
+    update.message.reply_text(
+        f"Hi {user.first_name},\n\nI can Download Files from Terabox.\n\nMade with ❤️ by @Mohd_arman_idrisi01\n\nSend any terabox link to download.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("Channel", url="https://t.me/BalaPriyan"), InlineKeyboardButton("Report bug", url="https://t.me/TeraBoxTgbot")]
+        ])
+    )
 
-
-TOKEN = os.getenv('TOKEN')
-LOG_CHANNEL = os.getenv('LOG_CHANNEL')
-TERA_COOKIE = os.getenv('TERA_COOKIE')
-API_HASH = os.getenv('API_HASH')
-API_ID = os.getenv('API_ID')
-
-
-
-async def terabox(url: str) -> str:
-    async with httpx.AsyncClient() as client:
-        async def retryme(url):
-            while True:
-                try:
-                    response = await client.get(url)
-                    return response
-                except:
-                    pass
-
-        url = retryme(url).url
-        key = url.split('?surl=')[-1]
-        url = f'http://www.terabox.com/wap/share/filelist?surl={key}'
-        headers = {"Cookie": f"ndus={TERA_COOKIE}"}
-
-        res = await retryme(url)
-        key = res.url.split('?surl=')[-1]
-        soup = BeautifulSoup(res.content, 'lxml')
-        jsToken = None
-
-        for fs in soup.find_all('script'):
-            fstring = fs.string
-            if fstring and fstring.startswith('try {eval(decodeURIComponent'):
-                jsToken = fstring.split('%22')[1]
-
-        res = await retryme(
-            f'https://www.terabox.com/share/list?app_id=250528&jsToken={jsToken}&shorturl={key}&root=1',
-            headers=headers)
-        result = res.json()
-
-        if result['errno'] != 0:
-            raise DDLException(
-                f"{result['errmsg']}' Check cookies")
-
-        result = result['list']
-
-        if len(result) > 1:
-            raise DDLException("Can't download multiple files")
-
-        result = result[0]
-
-        if result['isdir'] != '0':
-            raise DDLException("Can't download folder")
+def message(update: Update, context: CallbackContext) -> None:
+    message_text = update.message.text
+    if "terabox.com" in message_text or "teraboxapp.com" in message_text:
+        parts = message_text.split("/")
+        link_id = parts[-1]
 
         try:
-            return result['dlink']
-        except:
-            raise DDLException("Link Extraction Failed")
-
-
-async def download_and_upload_file(app, message, download_link: str) -> None:
-    # Download the file
-    async with httpx.AsyncClient() as client:
-        response = await client.get(download_link)
-        if response.status_code == 200:
-            file_name = download_link.split('/')[-1]
-            with open(file_name, 'wb') as file:
-                file.write(response.content)
-
-            # Upload the file to the user
-            await app.send_document(chat_id=message.chat.id, document=file_name,
-                                    caption=f"File downloaded from Terabox by user {message.from_user.first_name} {message.from_user.last_name}")
-
-            # Clean up: Delete the local file after upload
-            os.remove(file_name)
-
-
-async def handle_terabox_link(app, message) -> None:
-    link = message.text
-    try:
-        download_link = await terabox(link)
-        if download_link:
-            await download_and_upload_file(app, message, download_link)
-            await app.send_message(LOG_CHANNEL, f"File downloaded and uploaded from Terabox by user {message.from_user.first_name} {message.from_user.last_name}")
-        else:
-            await app.send_message(message.chat.id, "Failed to fetch the download link from Terabox. Please check the link.")
-    except Exception as e:
-        await app.send_message(message.chat.id, f"An error occurred: {str(e)}")
-
-
-# ... (other imports and environment variables)
-
-# ... (your functions and logic remain the same)
-
-async def main() -> None:
-    app = Client('bot', api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN)
-    await app.start()
-
-    # Define your filters and message handlers here
-    @app.on_message(filters.regex(r'https?://(?:1040)?terabox\.com[^\s]+'))
-    async def handle_terabox_link(client, message):
-        link = message.text
-        try:
-            download_link = await terabox(link)
-            if download_link:
-                await download_and_upload_file(app, message, download_link)
-                await app.send_message(LOG_CHANNEL, f"File downloaded and uploaded from Terabox by user {message.from_user.first_name} {message.from_user.last_name}")
+            details = get_details(link_id)
+            if details.get("ok"):
+                update.message.reply_text(f"Sending {len(details['list'])} Files Please Wait.!!")
+                for item in details['list']:
+                    send_file(details['shareid'], details['uk'], details['sign'], details['timestamp'], item['fs_id'], update.message.chat_id)
             else:
-                await app.send_message(message.chat.id, "Failed to fetch the download link from Terabox. Please check the link.")
+                update.message.reply_text(details.get('message', 'Error fetching details'))
         except Exception as e:
-            await app.send_message(message.chat.id, f"An error occurred: {str(e)}")
+            print(e)
+            update.message.reply_text("Error occurred while processing the link.")
+    else:
+        update.message.reply_text("Please send a valid Terabox link.")
 
-    await app.idle()
+def get_details(link_id):
+    try:
+        response = requests.get(f"http://terabox-dl.qtcloud.workers.dev/api/get-info?shorturl={link_id}&pwd=")
+        return response.json()
+    except requests.RequestException as e:
+        print(e)
+        return {}
+
+def send_file(shareid, uk, sign, timestamp, fs_id, chat_id):
+    try:
+        data = {
+            "shareid": shareid,
+            "uk": uk,
+            "sign": sign,
+            "timestamp": timestamp,
+            "fs_id": fs_id
+        }
+        headers = {
+            "Content-Type": "application/json"
+        }
+        response = requests.post("https://terabox-dl.qtcloud.workers.dev/api/get-download", json=data, headers=headers)
+        file_url = response.json().get('url')
+        bot.send_message(chat_id=chat_id, text=f"Download link: {file_url}")
+    except requests.RequestException as e:
+        print(e)
+
+app = Flask(__name__)
+
+@app.route('/', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot.bot)
+    bot.dispatcher.process_update(update)
+    return 'OK'
+
+dispatcher.add_handler(CommandHandler("start", start))
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, message))
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    bot.start_polling()
+    app.run(port=3000)
